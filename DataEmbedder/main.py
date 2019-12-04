@@ -3,6 +3,7 @@ import numpy as np
 import random
 import matplotlib.pyplot as plt
 import cmath
+import os
 
 random.seed(3)
 
@@ -172,51 +173,96 @@ def get_ec(img_len, block_size):
     return additional_bit / (img_len*img_len)
 
 
+def get_paths(root):
+    g = os.walk(root)
+    files = []
+    for path, dir_list, file_list in g:
+        for file_name in file_list:
+            files.append(os.path.join(path, file_name))
+    return files
+
+
 if __name__ == '__main__':
     # 程序参数
-    lena_path = './data/lena.bmp'
+    root = './data/'
     short_key_len = 16
-    block_sizes = [1, 2, 4, 8, 16, 32, 64]
+    block_sizes = [8, 16, 32, 64]
+    # 绘图参数
+    markers = ['o', 'd', 'x', 's', '.', '*', '+', 'H', 'p']
+    # 预处理
+    paths = get_paths(root)
+    image_names = [path[len(root):-4] for path in paths]
+
     extracted_bit_error_rates = []
     ecs = []
     psnrs = []
-    for block_size in block_sizes:
-        # 预处理
-        img = get_img(lena_path)  # 图像读取
-        block_num = int(len(img) / block_size)
-        encryption_key = [random.randrange(256) for x in range(short_key_len)]  # 生成encryption key
-        data_hidding_key = get_data_hidding_key(int(block_num*block_num),
-                                                int(block_size*block_size), int(block_size*block_size / 2))
-        data = [random.randrange(0, 2, 1) for x in range(int(block_num * block_num))]  # 生成需要隐藏的数据
+    for path in paths:
+        print(path)
+        image_error_rate = []
+        image_ecs = []
+        image_psnrs = []
+        for block_size in block_sizes:
+            img = get_img(path)  # 图像读取
+            block_num = int(len(img) / block_size)
+            encryption_key = [random.randrange(256) for x in range(short_key_len)]  # 生成encryption key
+            data_hidding_key = get_data_hidding_key(int(block_num*block_num),
+                                                    int(block_size*block_size), int(block_size*block_size / 2))
+            data = [random.randrange(0, 2, 1) for x in range(int(block_num * block_num))]  # 生成需要隐藏的数据
 
-        # show_img(img)
-        # 图像加密
-        encrypted_img = image_encryption(img, encryption_key)
-        # show_img(encrypted_img)
-        # 图像嵌入数据
-        embedded_img = data_embedding(encrypted_img, data_hidding_key, data)
-        # show_img(embedded_img)
-        # 图像解密
-        decrypted_img = image_encryption(embedded_img, encryption_key)
-        # show_img(decrypted_img)
-        # 数据提取，原始图像恢复
-        origial_img, extracted_data = data_extraction(decrypted_img, data_hidding_key)
-        # show_img(origial_img)
-        extracted_bit_error_rates.append(get_error_rate(data, extracted_data))
-        psnrs.append(get_psnr(img, origial_img))
-        ecs.append(get_ec(len(img), block_size))
-    # 输出结果
-    print('block size', block_sizes)
-    print('extracted error rate', extracted_bit_error_rates)
-    print('psnr', psnrs)
-    print('ec', ecs)
-    # 绘图
-    plt.subplot(2, 2, 1)
-    plt.plot(block_sizes, extracted_bit_error_rates)
-    plt.subplot(2, 2, 2)
-    plt.plot(block_sizes, ecs)
-    plt.subplot(2, 2, 3)
-    plt.plot(block_sizes, psnrs)
-    plt.subplot(2, 2, 4)
-    plt.plot(ecs, psnrs)
+            # show_img(img)
+            # 图像加密
+            encrypted_img = image_encryption(img, encryption_key)
+            # show_img(encrypted_img)
+            # 图像嵌入数据
+            embedded_img = data_embedding(encrypted_img, data_hidding_key, data)
+            # show_img(embedded_img)
+            # 图像解密
+            decrypted_img = image_encryption(embedded_img, encryption_key)
+            # show_img(decrypted_img)
+            # 数据提取，原始图像恢复
+            origial_img, extracted_data = data_extraction(decrypted_img, data_hidding_key)
+            # show_img(origial_img)
+            image_error_rate.append(get_error_rate(data, extracted_data))
+            image_psnrs.append(get_psnr(img, origial_img))
+            image_ecs.append(get_ec(len(img), block_size))
+        extracted_bit_error_rates.append(image_error_rate)
+        psnrs.append(image_psnrs)
+        ecs.append(image_ecs)
+    # 绘制block_size - extracted bits error rate曲线
+    for idx, image_er in enumerate(extracted_bit_error_rates):
+        plt.plot(block_sizes, image_er, marker=markers[idx], label=image_names[idx])
+    plt.xlabel('Side length of each block s')
+    plt.ylabel('Extracted-bit error rate (%)')
+    plt.title('Extracted-bit error rate with respect to block sizes.')
+    plt.legend()
     plt.show()
+    # 绘制Embedding capacity - psnr曲线
+    for idx, psnr in enumerate(psnrs):
+        ec = ecs[idx]
+        plt.plot(ec, psnr)
+        plt.xlabel('Embedding Capacity (bpp)')
+        plt.ylabel('PSNR (dB)')
+        plt.title(image_names[idx])
+        plt.show()
+    # 输出结果以保存
+    with open('result.txt', 'w') as f:
+        f.write('block sizes: ')
+        f.write(str(block_sizes))
+        f.write('\nExtracted-bit error rate: ')
+        for idx, er in enumerate(extracted_bit_error_rates):
+            f.write('\n')
+            f.write(str(image_names[idx]))
+            f.write(': ')
+            f.write(str(er))
+        f.write('\nEmbedding Capacity (bpp): ')
+        for idx, ec in enumerate(ecs):
+            f.write('\n')
+            f.write(str(image_names[idx]))
+            f.write(': ')
+            f.write(str(ec))
+        f.write('\nPSNR (dB)')
+        for idx, psnr in enumerate(psnrs):
+            f.write('\n')
+            f.write(str(image_names[idx]))
+            f.write(': ')
+            f.write(str(psnr))
