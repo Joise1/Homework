@@ -65,3 +65,6 @@ python3 main.py
 若想要进行文档的识别，需要将 config.input_file 设置成为输入文档的位置，文档格式为：每行一句话。
 
 若想要进行文档识别结果的评估，需要将 config.gold_trigger_file 设置成为正确结果文档的位置，文档格式为：每行为一句话对应的触发器三元组。
+
+## Trained Model
+链接: https://pan.baidu.com/s/1eMApiEmgIYwvlQBvzIgLLg 提取码: v7aw 
