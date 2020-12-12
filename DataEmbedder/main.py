@@ -186,11 +186,13 @@ if __name__ == '__main__':
     # 程序参数
     root = './data/'
     short_key_len = 16
-    block_sizes = [8, 16, 32, 64]
+    # block_sizes = [8, 16, 32, 64]
+    block_sizes = [32]
     # 绘图参数
     markers = ['o', 'd', 'x', 's', '.', '*', '+', 'H', 'p']
     # 预处理
-    paths = get_paths(root)
+    # paths = get_paths(root)
+    paths = ['./data/lena.bmp']
     image_names = [path[len(root):-4] for path in paths]
 
     extracted_bit_error_rates = []
