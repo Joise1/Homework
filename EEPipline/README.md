@@ -1,4 +1,10 @@
-# EEPpipline
+# EEPipline
+## Idea
+基础Baseline为直接将事件提取任务的两阶段触发器提取（Trigger Extraction）和论元提取（Argument Extraction）分别重新建模成为两个序列标注任务。
+
+但是由于ACE2005数据集的规模较小，而事件类别种类数目不多，直接建模成为序列标注任务会导致每个类别的样本数目过少。
+
+本方法将事件提取任务划分为两阶段，通过序列标注识别触发器，通过二分类判断触发器对应的事件类型，不仅能够解决每个类别样本数目过少的问题，同时能够利用事件类型本身的信息。
 ## Task
 ### Task 1: Trigger Identification
 将触发器识别（Trigger Identification）任务重新建模成为序列标注任务（Sequence Labeling）。
@@ -67,6 +73,15 @@ python3 main.py
 若想要进行文档识别结果的评估，需要将 config.gold_trigger_file 设置成为正确结果文档的位置，文档格式为：每行为一句话对应的触发器三元组。
 
 ## Result
+
+表格一为本方法的实验结果与直接使用BERT-LSTM-CRF的实验结果进行序列标注进行比较。
+
+![image-20201213162338340](C:\Users\dell\AppData\Roaming\Typora\typora-user-images\image-20201213162338340.png)
+
+表格二为构造Trigger Classification的训练数据集时，正样本与负样本不同构造比例对应的实验结果。
+
+![image-20201213163020277](C:\Users\dell\AppData\Roaming\Typora\typora-user-images\image-20201213163020277.png)
+
 
 
 ## Trained Model
