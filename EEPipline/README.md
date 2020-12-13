@@ -4,7 +4,7 @@
 
 但是由于ACE2005数据集的规模较小，而事件类别种类数目不多，直接建模成为序列标注任务会导致每个类别的样本数目过少。
 
-本方法将事件提取任务划分为两阶段，通过序列标注识别触发器，通过二分类判断触发器对应的事件类型，不仅能够解决每个类别样本数目过少的问题，同时能够利用事件类型本身的信息。
+本方法将触发器提取任务划分为两阶段，通过序列标注识别触发器，通过二分类判断触发器对应的事件类型，不仅能够解决每个类别样本数目过少的问题，同时能够利用事件类型本身的信息。
 ## Task
 ### Task 1: Trigger Identification
 将触发器识别（Trigger Identification）任务重新建模成为序列标注任务（Sequence Labeling）。
@@ -66,7 +66,7 @@ python3 tri_cls.py --do-eval True
 ```shell script
 python3 main.py
 ```
-若想要进行单句的识别，需要将 config.input_file 设置为 None；
+若想要进行单句的识别，需要将 config.input_file 和 config.gold_trigger_file 设置为 None；
 
 若想要进行文档的识别，需要将 config.input_file 设置成为输入文档的位置，文档格式为：每行一句话。
 
