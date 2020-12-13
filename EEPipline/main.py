@@ -17,6 +17,7 @@ if __name__ == '__main__':
     model_id = load_model(model_id, name=config.load_path)
     model_cls = BertQA(config.bert_path, 2)
     model_cls = load_model(model_cls, name=config.load_tri_cls_path)
+    # predict
     if not config.input_file:
         while True:
             # get input

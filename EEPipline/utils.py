@@ -2,18 +2,6 @@
 import torch
 import os
 import datetime
-import unicodedata
-
-
-class InputFeatures(object):
-    def __init__(self, input_id, label_id, input_mask, sent=None, trigger=None, event_type=None):
-        self.input_id = input_id
-        self.label_id = label_id
-        self.input_mask = input_mask
-        self.sent = sent
-        self.trigger = trigger
-        self.event_type = event_type
-        self.p = 0
 
 
 def load_vocab(vocab_file):
@@ -31,7 +19,14 @@ def load_vocab(vocab_file):
     return vocab
 
 
-def read_corpus_tri_cls(path, max_length, label_dic, vocab):
+def read_corpus_tri_cls(path, max_length, vocab):
+    """
+    为触发器分类读取文档
+    :param path: 触发器识别结果存储路径
+    :param max_length: 单句最大长度
+    :param vocab: 词汇
+    :return:
+    """
     file = open(path, encoding='utf-8')
     content = file.readlines()
     file.close()
@@ -44,8 +39,6 @@ def read_corpus_tri_cls(path, max_length, label_dic, vocab):
             tokens_b = tokens_b[0:(max_length-3-len(tokens_a))]
         tokens_f = ['[CLS]'] + tokens_a + ['[SEP]'] + tokens_b + ['[SEP]']
         input_ids = [int(vocab[i]) if i in vocab else int(vocab['[UNK]']) for i in tokens_f]
-        # see
-        tokens_f = [list(vocab.keys())[int(id)] for id in input_ids]
         label = int(label)
         input_mask = [1] * len(input_ids)
         type_mask = [0] * (2+len(tokens_a)) + [1] * (max_length-2-len(tokens_a))
@@ -56,12 +49,14 @@ def read_corpus_tri_cls(path, max_length, label_dic, vocab):
     return result
 
 
-def read_corpus(path, max_length, label_dic, vocab, content=None):
+def read_corpus_tr_id(path, max_length, label_dic, vocab, content=None):
     """
+    为触发器识别读取数据集
+    文档格式为：sentence ||| tags
     :param path:数据文件路径
-    :param max_length: 最大长度
+    :param max_length: 单句最大长度
     :param label_dic: 标签字典
-    :return:
+    :return: result : [()] * 句子数目
     """
     if not content:
         file = open(path, encoding='utf-8')
@@ -102,15 +97,13 @@ def read_corpus(path, max_length, label_dic, vocab, content=None):
                 if idx < len(label) - 1 and label[idx + 1] == 'O':
                     triggers.append(trigger)
                     trigger = {'begin_pos': 0, 'end_pos': 0}
-        feature = InputFeatures(input_id=input_ids, input_mask=input_mask, label_id=label_ids,
-                                sent=tokens, trigger=triggers)
-        result.append(feature)
+        result.append((input_ids, input_mask, label_ids, tokens, triggers))
     return result
 
 
 def save_model(model, epoch, path='result', **kwargs):
     """
-    默认保留所有模型
+    保存模型
     :param model: 模型
     :param path: 保存路径
     :param loss: 校验损失
@@ -125,21 +118,28 @@ def save_model(model, epoch, path='result', **kwargs):
         name = cur_time + '--epoch:{}'.format(epoch)
     else:
         name = kwargs.get('name', None)
-        full_name = os.path.join(path, name)
-        torch.save(model.state_dict(), full_name)
-        print('Saved model at epoch {} successfully'.format(epoch))
-        with open('{}/checkpoint'.format(path), 'w') as file:
-            file.write(name)
-            print('Write to checkpoint')
+    full_name = os.path.join(path, name)
+    torch.save(model.state_dict(), full_name)
+    print('Saved model at epoch {} successfully'.format(epoch))
+    with open('{}/checkpoint'.format(path), 'w') as file:
+        file.write(name)
+        print('Write to checkpoint')
 
 
 def load_model(model, path='result', **kwargs):
+    """
+    加载模型
+    :param model: 模型
+    :param path: 模型保存路径
+    :param kwargs: 其他参数
+    :return:
+    """
     if kwargs.get('name', None) is None:
         with open('{}/checkpoint'.format(path)) as file:
             content = file.read().strip()
             name = os.path.join(path, content)
     else:
-        name=kwargs['name']
+        name = kwargs['name']
         name = os.path.join(path, name)
     model.load_state_dict(torch.load(name, map_location=lambda storage, loc: storage))
     print('load model {} successfully'.format(name))

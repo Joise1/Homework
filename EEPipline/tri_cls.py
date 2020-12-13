@@ -7,7 +7,7 @@ import torch
 from torch import optim
 from torch.autograd import Variable
 from config import Config
-from utils import load_vocab, read_corpus_tri_cls, load_model, save_model, read_corpus
+from utils import load_vocab, read_corpus_tri_cls, load_model, save_model, read_corpus_tr_id
 from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
 from model import BertQA
@@ -24,22 +24,21 @@ def train():
     vocab = load_vocab(config.vocab)
     label_dic = load_vocab(config.tri_cls_label_file)
     # load train and dev and test dataset
-    train_data = read_corpus_tri_cls(config.tri_cls_train_file, max_length=config.max_length, label_dic=label_dic, vocab=vocab)
+    train_data = read_corpus_tri_cls(config.tri_cls_train_file, max_length=config.max_length, vocab=vocab)
     train_ids = torch.LongTensor([temp[0] for temp in train_data])
     train_masks = torch.LongTensor([temp[1] for temp in train_data])
     train_types = torch.LongTensor([temp[2] for temp in train_data])
     train_tags = torch.LongTensor([temp[3] for temp in train_data])
     train_dataset = TensorDataset(train_ids, train_masks, train_types, train_tags)
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=config.batch_size)
-    dev_data = read_corpus_tri_cls(config.tri_cls_dev_file, max_length=config.max_length, label_dic=label_dic, vocab=vocab)
+    dev_data = read_corpus_tri_cls(config.tri_cls_dev_file, max_length=config.max_length, vocab=vocab)
     dev_ids = torch.LongTensor([temp[0] for temp in dev_data])
     dev_masks = torch.LongTensor([temp[1] for temp in dev_data])
     dev_types = torch.LongTensor([temp[2] for temp in dev_data])
     dev_tags = torch.LongTensor([temp[3] for temp in dev_data])
     dev_dataset = TensorDataset(dev_ids, dev_masks, dev_types, dev_tags)
     dev_loader = DataLoader(dev_dataset, shuffle=True, batch_size=config.batch_size)
-    test_data = read_corpus_tri_cls(config.tri_cls_test_file, max_length=config.max_length, label_dic=label_dic,
-                                   vocab=vocab)
+    test_data = read_corpus_tri_cls(config.tri_cls_test_file, max_length=config.max_length, vocab=vocab)
     test_ids = torch.LongTensor([temp[0] for temp in test_data])
     test_masks = torch.LongTensor([temp[1] for temp in test_data])
     test_types = torch.LongTensor([temp[2] for temp in test_data])
@@ -94,8 +93,7 @@ def test():
     vocab = load_vocab(config.vocab)
     label_dic = load_vocab(config.tri_cls_label_file)
     # load train and dev and test dataset
-    test_data = read_corpus_tri_cls(config.tri_cls_test_file, max_length=config.max_length, label_dic=label_dic,
-                                    vocab=vocab)
+    test_data = read_corpus_tri_cls(config.tri_cls_test_file, max_length=config.max_length, vocab=vocab)
     test_ids = torch.LongTensor([temp[0] for temp in test_data])
     test_masks = torch.LongTensor([temp[1] for temp in test_data])
     test_types = torch.LongTensor([temp[2] for temp in test_data])
@@ -113,7 +111,7 @@ def test():
 
 def predict(config=None, model=None, sent=None):
     """
-    Input: results of trigger identification saved in config.tri_id_result_file or sent
+    Input: results of trigger identification saved in config.tri_id_result_file or single sentence
     Output: results of trigger classification
             format: [(event type, trigger begin pos, trigger end pos) * num of triggers] * num of sentences
     """
@@ -130,17 +128,17 @@ def predict(config=None, model=None, sent=None):
     if config.use_cuda:
         model.cuda()
     if (not config.input_file) and sent:
-        test_datas = read_corpus(config.tri_id_result_file, max_length=config.max_length,
+        test_datas = read_corpus_tr_id(config.tri_id_result_file, max_length=config.max_length,
                                  label_dic=load_vocab(config.tri_id_label_file), vocab=vocab, content=[sent])
     else:
         # load trigger identification result
-        test_datas = read_corpus(config.tri_id_result_file, max_length=config.max_length,
+        test_datas = read_corpus_tr_id(config.tri_id_result_file, max_length=config.max_length,
                                  label_dic=load_vocab(config.tri_id_label_file), vocab=vocab)
     sent_saves = []
     for i, test_data in tqdm.tqdm(enumerate(test_datas)):
         sent_save = []  # save sentence’s triggers
-        sent = test_data.sent
-        triggers = test_data.trigger
+        sent = test_data[3]
+        triggers = test_data[4]
         # predict event type for each trigger
         for trigger in triggers:
             inputs, masks, type_masks = [], [], []
@@ -265,8 +263,16 @@ if __name__ == '__main__':
                         help='Whether to retrain the model.')
     parser.add_argument('--do-eval', type=bool, default=False,
                         help='Whether to perform evaluation.')
+    parser.add_argument('--with-golden-trigger', type=bool, default=False,
+                        help='Whether to evaluate with golden triggers.')
     args = parser.parse_args()
     if args.do_train:
         train()
     if args.do_eval:
-        predict()
+        if not args.with_golden_trigger:
+            predict()
+        else:
+            config = Config()
+            config.tri_id_result_file = './data/tri_id_test.txt'
+            config.gold_trigger_file = './data/golden_test.txt'
+            predict(config)

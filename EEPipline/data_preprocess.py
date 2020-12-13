@@ -4,7 +4,7 @@ import random
 import re
 
 
-def ace_preprocess():
+def ace_preprocess(baseline=False):
     root_path = 'data/raw_data/'
     save_path = 'data/'
     file_names = ['en-dev.json', 'en-test.json', 'en-train.json']
@@ -20,6 +20,9 @@ def ace_preprocess():
         for t in ['dev', 'test', 'train']:
             if t in file_name:
                 file_type = t
+        for data_type in ['tri_cls_', 'tri_id_', 'golden_', 'sentence_']:
+            if os.path.exists(save_path + data_type + file_type + '.txt'):
+                os.remove(save_path + data_type + file_type + '.txt')
         with open(root_path + file, encoding='utf-8') as f:
             sents = json.load(f)
             for sent in sents:
@@ -35,9 +38,14 @@ def ace_preprocess():
                     event_begin_index = event['trigger']['position'][0]
                     event_end_index = event['trigger']['position'][1]
                     events.append((event_begin_index, event_end_index, event_type))
-                    label[event_begin_index] = 'B-TRI'
-                    for i in range(event_begin_index+1, event_end_index+1):
-                        label[i] = 'I-TRI'
+                    if baseline:
+                        label[event_begin_index] = 'B-' + event_type
+                        for i in range(event_begin_index+1, event_end_index+1):
+                            label[i] = 'I-' + event_type
+                    else:
+                        label[event_begin_index] = 'B-TRI'
+                        for i in range(event_begin_index+1, event_end_index+1):
+                            label[i] = 'I-TRI'
                 # get corpus for trigger identification
                 with open(save_path + 'tri_id_' + file_type + '.txt', 'a', encoding='utf-8') as f:
                     for i in range(len(text)):
@@ -52,8 +60,39 @@ def ace_preprocess():
                         random.shuffle(event_types)
                         for i, t in enumerate(event_types):
                             if not (event_types[i] == event_type or
-                                    event_types[(i+1) % len(event_types)] == event_type or
-                                    event_types[(i+2) % len(event_types)] == event_type):
+                                    event_types[(i + 1) % len(event_types)] == event_type or
+                                    event_types[(i + 2) % len(event_types)] == event_type or
+                                    event_types[(i + 3) % len(event_types)] == event_type or
+                                    event_types[(i + 4) % len(event_types)] == event_type or
+                                    event_types[(i + 5) % len(event_types)] == event_type or
+                                    event_types[(i + 6) % len(event_types)] == event_type or
+                                    event_types[(i + 7) % len(event_types)] == event_type or
+                                    event_types[(i + 8) % len(event_types)] == event_type or
+                                    event_types[(i + 9) % len(event_types)] == event_type or
+                                    event_types[(i + 10) % len(event_types)] == event_type or
+                                    event_types[(i + 11) % len(event_types)] == event_type or
+                                    event_types[(i + 12) % len(event_types)] == event_type or
+                                    event_types[(i + 13) % len(event_types)] == event_type or
+                                    event_types[(i + 14) % len(event_types)] == event_type or
+                                    event_types[(i + 15) % len(event_types)] == event_type or
+                                    event_types[(i + 16) % len(event_types)] == event_type or
+                                    event_types[(i + 17) % len(event_types)] == event_type or
+                                    event_types[(i + 18) % len(event_types)] == event_type or
+                                    event_types[(i + 19) % len(event_types)] == event_type or
+                                    event_types[(i + 20) % len(event_types)] == event_type or
+                                    event_types[(i + 21) % len(event_types)] == event_type or
+                                    event_types[(i + 22) % len(event_types)] == event_type or
+                                    event_types[(i + 23) % len(event_types)] == event_type or
+                                    event_types[(i + 24) % len(event_types)] == event_type or
+                                    event_types[(i + 25) % len(event_types)] == event_type or
+                                    event_types[(i + 26) % len(event_types)] == event_type or
+                                    event_types[(i + 27) % len(event_types)] == event_type or
+                                    event_types[(i + 28) % len(event_types)] == event_type or
+                                    event_types[(i + 29) % len(event_types)] == event_type or
+                                    event_types[(i + 30) % len(event_types)] == event_type or
+                                    event_types[(i + 31) % len(event_types)] == event_type or
+                                    event_types[(i + 32) % len(event_types)] == event_type
+                            ):
                                 continue
                             for tt in text[event[0]:event[1]+1]:
                                 f.write(tt.lower() + ' ')

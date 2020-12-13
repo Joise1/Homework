@@ -27,8 +27,8 @@ class CRF(nn.Module):
         """
         Args:
             target_size: int, target size
-            use_cuda: bool, 是否使用gpu, default is True
-            average_batch: bool, loss是否作平均, default is True
+            use_cuda: bool
+            average_batch: bool
         """
         super(CRF, self).__init__()
         for k in kwargs:
@@ -49,8 +49,6 @@ class CRF(nn.Module):
             feats: size=(batch_size, seq_len, self.target_size+2)
             mask: size=(batch_size, seq_len)
 
-        Returns:
-            xxx
         """
         batch_size = feats.size(0)
         seq_len = feats.size(1)

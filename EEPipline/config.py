@@ -20,7 +20,7 @@ class Config(object):
         self.vocab = './data/bert/vocab.txt'
 
         self.max_length = 200
-        self.use_cuda = False
+        self.use_cuda = True
         self.gpu = 1
         self.batch_size = 16
         self.bert_path = 'bert-base-uncased'
@@ -29,7 +29,7 @@ class Config(object):
         self.dropout1 = 0.5
         self.dropout_ratio = 0.5
         self.rnn_layer = 1
-        self.lr = 1e-4
+        self.lr = 1e-5
         self.lr_decay = 1e-5
         self.weight_decay = 0.00005
 
@@ -47,11 +47,3 @@ class Config(object):
     def __str__(self):
 
         return '\n'.join(['%s:%s' % item for item in self.__dict__.items()])
-
-
-if __name__ == '__main__':
-
-    con = Config()
-    con.update(gpu=8)
-    print(con.gpu)
-    print(con)

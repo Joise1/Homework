@@ -4,17 +4,18 @@ from torch.autograd import Variable
 from config import Config
 from model import BertLstmCrf
 import torch.optim as optim
-from utils import load_vocab, read_corpus, load_model, save_model
+from utils import load_vocab, read_corpus_tr_id, load_model, save_model
 from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
 import tqdm
 import argparse
 
 
-def train():
+def train(config=None):
     """Train Model"""
     # load config
-    config = Config()
+    if not config:
+        config = Config()
     print('settings:\n', config)
     # load corpus
     print('loading corpus.')
@@ -22,17 +23,17 @@ def train():
     label_dic = load_vocab(config.tri_id_label_file)
     tagset_size = len(label_dic)
     # load train and dev dataset
-    train_data = read_corpus(config.tri_id_train_file, max_length=config.max_length, label_dic=label_dic, vocab=vocab)
-    train_ids = torch.LongTensor([temp.input_id for temp in train_data])
-    train_masks = torch.LongTensor([temp.input_mask for temp in train_data])
-    train_tags = torch.LongTensor([temp.label_id for temp in train_data])
+    train_data = read_corpus_tr_id(config.tri_id_train_file, max_length=config.max_length, label_dic=label_dic, vocab=vocab)
+    train_ids = torch.LongTensor([temp[0] for temp in train_data])
+    train_masks = torch.LongTensor([temp[1] for temp in train_data])
+    train_tags = torch.LongTensor([temp[2] for temp in train_data])
     train_dataset = TensorDataset(train_ids, train_masks, train_tags)
     train_loader = DataLoader(train_dataset, shuffle=True, batch_size=config.batch_size)
 
-    dev_data = read_corpus(config.tri_id_dev_file, max_length=config.max_length, label_dic=label_dic, vocab=vocab)
-    dev_ids = torch.LongTensor([temp.input_id for temp in dev_data])
-    dev_masks = torch.LongTensor([temp.input_mask for temp in dev_data])
-    dev_tags = torch.LongTensor([temp.label_id for temp in dev_data])
+    dev_data = read_corpus_tr_id(config.tri_id_dev_file, max_length=config.max_length, label_dic=label_dic, vocab=vocab)
+    dev_ids = torch.LongTensor([temp[0] for temp in dev_data])
+    dev_masks = torch.LongTensor([temp[1] for temp in dev_data])
+    dev_tags = torch.LongTensor([temp[2] for temp in dev_data])
     dev_dataset = TensorDataset(dev_ids, dev_masks, dev_tags)
     dev_loader = DataLoader(dev_dataset, shuffle=True, batch_size=config.batch_size)
     # init model
@@ -66,12 +67,14 @@ def train():
             print('dev loss: ', eval_loss, ' -> ', dev_loss_temp)
             eval_loss = dev_loss_temp
             save_model(model, epoch)
+    return model
 
 
-def test():
+def test(config=None, model=None):
     """Test Model in test file"""
     # load config
-    config = Config()
+    if not config:
+        config = Config()
     print('settings:\n', config)
     # load corpus
     print('loading corpus')
@@ -79,15 +82,16 @@ def test():
     label_dic = load_vocab(config.tri_id_label_file)
     tagset_size = len(label_dic)
     # load test dataset
-    test_data = read_corpus(config.tri_id_test_file, max_length=config.max_length, label_dic=label_dic, vocab=vocab)
-    test_ids = torch.LongTensor([temp.input_id for temp in test_data])
-    test_masks = torch.LongTensor([temp.input_mask for temp in test_data])
-    test_tags = torch.LongTensor([temp.label_id for temp in test_data])
+    test_data = read_corpus_tr_id(config.tri_id_test_file, max_length=config.max_length, label_dic=label_dic, vocab=vocab)
+    test_ids = torch.LongTensor([temp[0] for temp in test_data])
+    test_masks = torch.LongTensor([temp[1] for temp in test_data])
+    test_tags = torch.LongTensor([temp[2] for temp in test_data])
     test_dataset = TensorDataset(test_ids, test_masks, test_tags)
     test_loader = DataLoader(test_dataset, shuffle=False, batch_size=config.batch_size)
     # load trained model
-    model = BertLstmCrf(config.bert_path, tagset_size, config.bert_embedding, config.rnn_hidden, config.rnn_layer, dropout_ratio=config.dropout_ratio, dropout1=config.dropout1, use_cuda=config.use_cuda)
-    model = load_model(model, name=config.load_path)
+    if not model:
+        model = BertLstmCrf(config.bert_path, tagset_size, config.bert_embedding, config.rnn_hidden, config.rnn_layer, dropout_ratio=config.dropout_ratio, dropout1=config.dropout1, use_cuda=config.use_cuda)
+        model = load_model(model, name=config.load_path)
     if config.use_cuda:
         model.cuda()
     # evaluate model in test file
@@ -117,6 +121,7 @@ def predict(config=None, model=None, sent=None):
         model.cuda()
     # begin predicting
     if (not config.input_file) and sent:
+        # preprocess sent
         sent = sent.lower()
         tokens = sent.split()
         tokens = tokens[0:min(config.max_length-2, len(tokens))]
@@ -125,6 +130,7 @@ def predict(config=None, model=None, sent=None):
         input_masks = torch.LongTensor([[1] * len(input_ids[0])])
         if config.use_cuda and torch.cuda.is_available():
             input_ids, input_masks = input_ids.cuda(), input_masks.cuda()
+        # predict tags
         with torch.no_grad():
             feats = model(input_ids, input_masks)
             path_score, best_path = model.crf(feats, input_masks)
@@ -161,6 +167,7 @@ def predict(config=None, model=None, sent=None):
             for idx in range(inputs.shape[0]):
                 sents.append(inputs[idx][masks[idx]].cpu().numpy().tolist())
 
+            # predict labels
             if config.use_cuda:
                 inputs, masks = inputs.cuda(), masks.cuda()
             with torch.no_grad():
@@ -172,6 +179,7 @@ def predict(config=None, model=None, sent=None):
                 pred.append(best_path[idx][masks[idx]].cpu().numpy().tolist())
         # save result
         save_results(sents, pred, config)
+        return pred
 
 
 def evaluate(model, data_loader, epoch, config, save_result=False):
