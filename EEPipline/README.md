@@ -76,12 +76,11 @@ python3 main.py
 
 表格一为本方法的实验结果与直接使用BERT-LSTM-CRF的实验结果进行序列标注进行比较。
 
-![image-20201213162338340](C:\Users\dell\AppData\Roaming\Typora\typora-user-images\image-20201213162338340.png)
+![img](pic/Result1.png)
 
 表格二为构造Trigger Classification的训练数据集时，正样本与负样本不同构造比例对应的实验结果。
 
-![image-20201213163020277](C:\Users\dell\AppData\Roaming\Typora\typora-user-images\image-20201213163020277.png)
-
+![img](pic/Result2.png)
 
 
 ## Trained Model
